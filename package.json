@@ -1,0 +1,12 @@
+{
+  "name": "node",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:Veronica57/nodejs.git",
+  "author": "Veronica <tveronichka@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "colors": "^1.4.0"
+  }
+}
