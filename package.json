@@ -1,0 +1,14 @@
+{
+  "name": "node",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:Veronica57/nodejs.git",
+  "author": "Veronica <tveronichka@gmail.com>",
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "colors": "^1.4.0",
+    "moment": "^2.29.1",
+    "moment-precise-range-plugin": "^1.3.0"
+  }
+}
