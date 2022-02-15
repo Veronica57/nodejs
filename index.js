@@ -1,56 +1,25 @@
-// input date format hh-DD-MM-YYYY
-import "moment-precise-range-plugin";
-import moment, { preciseDiff } from "moment";
-import EventEmitter from "events";
-const [dateStringInFuture] = process.argv.slice(2);
-const DATE_FORMAT_PATTERN = "YYYY-MM-DD HH:mm:ss";
+import { createReadStream, createWriteStream } from "fs";
+import { createInterface } from "readline";
 
-/**
- * String to Date
- * @param dateString
- * @returns {Date}
- */
-const getDateFromDateString = (dateString) => {
-  const [hour, day, month, year] = dateString.split("-");
+const readStream = createReadStream("../access.log", "utf8");
+const writeStream1 = createWriteStream("../89.123.1.41_requests.log");
+const writeStream2 = createWriteStream("../34.48.240.111_requests.log");
 
-  return new Date(Date.UTC(year, month - 1, day, hour));
-};
+let numStr = 0;
 
-/**
- * Function outputs / completes timer
- * @param {Date} dateInFuture
- */
-const showRemainingTime = (dateInFuture) => {
-  const dateNow = new Date();
+const rl = createInterface({
+  input: readStream,
+  terminal: true,
+});
 
-  if (dateNow >= dateInFuture) {
-    emitter.emit("timerEnd");
-  } else {
-    const currentDateFormatted = moment(dateNow, DATE_FORMAT_PATTERN);
-    const futureDateFormatted = moment(dateInFuture, DATE_FORMAT_PATTERN);
-    const diff = preciseDiff(currentDateFormatted, futureDateFormatted);
-
-    console.clear();
-    console.log(diff);
+rl.on("line", (line) => {
+  if (line.includes("89.123.1.41")) {
+    writeStream1.write(line + "\n");
   }
-};
 
-/**
- * Function completes timer
- * @param {Number} timerId
- */
-const showTimerDone = (timerId) => {
-  clearInterval(timerId);
-  console.log("Таймер истек");
-};
+  if (line.includes("34.48.240.111")) {
+    writeStream2.write(line + "\n");
+  }
 
-const emitter = new EventEmitter();
-const dateInFuture = getDateFromDateString(dateStringInFuture);
-const timerId = setInterval(() => {
-  emitter.emit("timerTick", dateInFuture);
-}, 1000);
-
-emitter.on("timerTick", showRemainingTime);
-emitter.on("timerEnd", () => {
-  showTimerDone(timerId);
+  console.log(++numStr);
 });
