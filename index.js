@@ -1,25 +1,57 @@
-import { createReadStream, createWriteStream } from "fs";
-import { createInterface } from "readline";
+import { readdir, readFile } from "fs/promises";
+import { lstatSync } from "fs";
+import { prompt } from "inquirer";
+import { positional } from "yargs";
+import { join } from "path";
 
-const readStream = createReadStream("../access.log", "utf8");
-const writeStream1 = createWriteStream("../89.123.1.41_requests.log");
-const writeStream2 = createWriteStream("../34.48.240.111_requests.log");
+let currentDirectory = process.cwd();
+const options = positional("d", {
+  describe: "Path to directory",
+  default: process.cwd(),
+}).positional("p", {
+  describe: "Pattern",
+  default: "",
+}).argv;
+console.log(options);
 
-let numStr = 0;
-
-const rl = createInterface({
-  input: readStream,
-  terminal: true,
-});
-
-rl.on("line", (line) => {
-  if (line.includes("89.123.1.41")) {
-    writeStream1.write(line + "\n");
+class ListItem {
+  constructor(path, fileName) {
+    this.path = path;
+    this.fileName = fileName;
   }
 
-  if (line.includes("34.48.240.111")) {
-    writeStream2.write(line + "\n");
+  get isDir() {
+    return lstatSync(this.path).isDirectory();
   }
+}
 
-  console.log(++numStr);
-});
+const run = async () => {
+  const list = await readdir(currentDirectory);
+  const items = list.map(
+    (fileName) => new ListItem(join(currentDirectory, fileName), fileName)
+  );
+
+  const item = await prompt([
+    {
+      name: "fileName",
+      type: "list",
+      message: `Choose: ${currentDirectory}`,
+      choices: items.map((item) => ({ name: item.fileName, value: item })),
+    },
+  ]).then((answer) => answer.fileName);
+
+  if (item.isDir) {
+    currentDirectory = item.path;
+    return await run();
+  } else {
+    const data = await readFile(item.path, "utf-8");
+
+    if (options.p == null) console.log(data);
+    else {
+      const regExp = new RegExp(options.p, "igm");
+      console.log(data.match(regExp));
+    }
+  }
+};
+
+run();
