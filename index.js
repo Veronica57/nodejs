@@ -1,57 +1,49 @@
-import { readdir, readFile } from "fs/promises";
-import { lstatSync } from "fs";
-import { prompt } from "inquirer";
-import { positional } from "yargs";
+import { createServer } from "http";
 import { join } from "path";
+import {
+  lstatSync,
+  existsSync,
+  createReadStream,
+  readdirSync,
+  readFileSync,
+} from "fs";
 
-let currentDirectory = process.cwd();
-const options = positional("d", {
-  describe: "Path to directory",
-  default: process.cwd(),
-}).positional("p", {
-  describe: "Pattern",
-  default: "",
-}).argv;
-console.log(options);
+(async () => {
+  const isFile = (path) => lstatSync(path).isFile();
 
-class ListItem {
-  constructor(path, fileName) {
-    this.path = path;
-    this.fileName = fileName;
-  }
+  createServer((req, res) => {
+    const fullPath = join(process.cwd(), req.url);
+    console.log(fullPath);
+    if (!existsSync(fullPath)) return res.end("File or directory not found");
 
-  get isDir() {
-    return lstatSync(this.path).isDirectory();
-  }
-}
-
-const run = async () => {
-  const list = await readdir(currentDirectory);
-  const items = list.map(
-    (fileName) => new ListItem(join(currentDirectory, fileName), fileName)
-  );
-
-  const item = await prompt([
-    {
-      name: "fileName",
-      type: "list",
-      message: `Choose: ${currentDirectory}`,
-      choices: items.map((item) => ({ name: item.fileName, value: item })),
-    },
-  ]).then((answer) => answer.fileName);
-
-  if (item.isDir) {
-    currentDirectory = item.path;
-    return await run();
-  } else {
-    const data = await readFile(item.path, "utf-8");
-
-    if (options.p == null) console.log(data);
-    else {
-      const regExp = new RegExp(options.p, "igm");
-      console.log(data.match(regExp));
+    if (isFile(fullPath)) {
+      return createReadStream(fullPath).pipe(res);
     }
-  }
-};
 
-run();
+    let linksList = "";
+
+    const urlParams = req.url.match(/[\d\w\.]+/gi);
+
+    if (urlParams) {
+      urlParams.pop();
+      const prevUrl = urlParams.join("/");
+      linksList = urlParams.length
+        ? `<li><a href="/${prevUrl}">..</a></li>`
+        : '<li><a href="/">..</a></li>';
+    }
+    //
+
+    readdirSync(fullPath).forEach((fileName) => {
+      const filePath = join(req.url, fileName);
+      linksList += `<li><a href="${filePath}">${fileName}</a></li>`;
+    });
+    const HTML = readFileSync(join(__dirname, "index.html"), "utf-8").replace(
+      "##links",
+      linksList
+    );
+    res.writeHead(200, {
+      "Content-Type": "text/html",
+    });
+    return res.end(HTML);
+  }).listen(5555);
+})();
