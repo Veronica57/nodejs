@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script
+      src="https://cdn.socket.io/4.2.0/socket.io.min.js"
+      integrity="sha384-PiBR5S00EtOj2Lto9Uu81cmoyZqR57XcOna1oAuVuIEjzj0wpqDVfD0JA9eXlRsj"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <h1>Users: <span id="counter">0</span></h1>
+    <input id="input" type="text" autofocus />
+    <button id="button">Send</button>
+    <div id="messages"></div>
+    <script>
+      const socket = io("localhost:5555");
+      const messageBlock = document.querySelector("#messages");
+      const input = document.querySelector("#input");
+      const button = document.querySelector("#button");
+      const counter = document.querySelector("#counter");
+
+      button.addEventListener("click", () => {
+        const data = {
+          message: input.value,
+        };
+
+        socket.emit("client-msg", data);
+        input.value = "";
+      });
+
+      socket.on("connect", () => {
+        console.log("connected");
+      });
+
+      socket.on("count-change", (data) => {
+        counter.innerHTML = data;
+      });
+
+      socket.on("server-msg", (data) => {
+        messageBlock.insertAdjacentHTML(
+          "afterbegin",
+          `<div>${data.name}: ${data.message}</div>`
+        );
+      });
+    </script>
+  </body>
+</html>
