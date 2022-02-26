@@ -1,49 +1,38 @@
+import socket from "socket.io";
 import { createServer } from "http";
+import { createReadStream } from "fs";
 import { join } from "path";
-import {
-  lstatSync,
-  existsSync,
-  createReadStream,
-  readdirSync,
-  readFileSync,
-} from "fs";
 
-(async () => {
-  const isFile = (path) => lstatSync(path).isFile();
+const server = createServer((req, res) => {
+  const indexPath = join(__dirname, "index.html");
+  const readStream = createReadStream(indexPath);
 
-  createServer((req, res) => {
-    const fullPath = join(process.cwd(), req.url);
-    console.log(fullPath);
-    if (!existsSync(fullPath)) return res.end("File or directory not found");
+  readStream.pipe(res);
+});
 
-    if (isFile(fullPath)) {
-      return createReadStream(fullPath).pipe(res);
-    }
+const io = socket(server);
+let counter = 0;
+const msg = { message: "New client connected!", name: "Server" };
 
-    let linksList = "";
+io.on("connection", (client) => {
+  let clientName = client.id;
 
-    const urlParams = req.url.match(/[\d\w\.]+/gi);
+  counter += 1;
+  client.broadcast.emit("count-change", counter);
+  client.emit("count-change", counter);
 
-    if (urlParams) {
-      urlParams.pop();
-      const prevUrl = urlParams.join("/");
-      linksList = urlParams.length
-        ? `<li><a href="/${prevUrl}">..</a></li>`
-        : '<li><a href="/">..</a></li>';
-    }
-    //
+  client.broadcast.emit("server-msg", msg);
+  client.emit("server-msg", msg);
 
-    readdirSync(fullPath).forEach((fileName) => {
-      const filePath = join(req.url, fileName);
-      linksList += `<li><a href="${filePath}">${fileName}</a></li>`;
-    });
-    const HTML = readFileSync(join(__dirname, "index.html"), "utf-8").replace(
-      "##links",
-      linksList
-    );
-    res.writeHead(200, {
-      "Content-Type": "text/html",
-    });
-    return res.end(HTML);
-  }).listen(5555);
-})();
+  client.on("client-msg", (data) => {
+    const serverData = {
+      message: data.message,
+      name: clientName,
+    };
+
+    client.broadcast.emit("server-msg", serverData);
+    client.emit("server-msg", serverData);
+  });
+});
+
+server.listen(5555);
